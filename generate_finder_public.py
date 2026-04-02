@@ -450,26 +450,37 @@ var bldgToggle   = document.getElementById("bldg-toggle");
 var bldgDropdown = document.getElementById("bldg-dropdown");
 var bldgCaret    = document.getElementById("bldg-caret");
 
+// Updated filtering logic: only return rooms free at the requested time for at least minDur
 function findFreeWindows(loc, day, afterMin, minDur) {{
   var classes = (index[loc] && index[loc][day]) ? index[loc][day] : [];
   var DAY_START = 7 * 60, DAY_END = 24 * 60;
-  var windows = [];
-  var cursor = Math.max(afterMin, DAY_START);
+
+  // Check if the room is occupied at the requested time
   for (var ci = 0; ci < classes.length; ci++) {{
     var c = classes[ci];
-    if (c.end <= cursor) continue;
-    if (c.start > cursor) {{
-      var end = Math.min(c.start, DAY_END);
-      var dur = end - cursor;
-      if (dur >= minDur) windows.push({{ start: cursor, end: end, dur: dur, nextClass: c }});
+    if (afterMin >= c.start && afterMin < c.end) {{
+      // The room is occupied at the requested time
+      return [];
     }}
-    if (c.end > cursor) cursor = c.end;
   }}
-  if (cursor < DAY_END) {{
-    var dur = DAY_END - cursor;
-    if (dur >= minDur) windows.push({{ start: cursor, end: DAY_END, dur: dur, nextClass: null }});
+
+  // Find the next class after the requested time
+  var nextClass = null;
+  for (var ci = 0; ci < classes.length; ci++) {{
+    var c = classes[ci];
+    if (c.start >= afterMin) {{
+      nextClass = c;
+      break;
+    }}
   }}
-  return windows;
+
+  var freeEnd = nextClass ? nextClass.start : DAY_END;
+  var dur = freeEnd - afterMin;
+  if (dur >= minDur) {{
+    return [{{ start: afterMin, end: freeEnd, dur: dur, nextClass: nextClass }}];
+  }} else {{
+    return [];
+  }}
 }}
 
 function getCheckedBuildings() {{
